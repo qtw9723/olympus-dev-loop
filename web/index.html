@@ -17,7 +17,7 @@ header p{margin:0;max-width:38em}
 .tag{display:inline-block;margin-bottom:14px;padding:4px 12px;border:1.5px solid var(--on-field);font-weight:700;font-size:14px}
 section{padding:36px 0;border-top:1px solid var(--rule)}
 section:first-of-type{border-top:0}
-h2{margin:0 0 6px;font-size:22px;line-height:1.4}
+h2{margin:0 0 6px;font-size:26px;line-height:1.4}
 .cap{margin:0 0 18px;color:var(--muted);max-width:40em;font-size:15px}
 .legend{display:flex;flex-wrap:wrap;gap:6px 18px;margin:0 0 12px;padding:0;list-style:none;font-size:13px;color:var(--muted)}
 .legend li{display:flex;align-items:center;gap:8px}
@@ -28,11 +28,18 @@ h2{margin:0 0 6px;font-size:22px;line-height:1.4}
 .lane{list-style:none;margin:0 0 6px;padding:0;display:flex;align-items:stretch}
 .lane li{display:flex;align-items:center;flex:1 1 0;min-width:0}
 .lane li:not(:first-child)::before{content:"";width:16px;height:10px;margin:0 3px;flex:none;background:var(--muted);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 10'%3E%3Cpath d='M0 5h31M27 1l5 4-5 4' fill='none' stroke='black' stroke-width='1.4'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 10'%3E%3Cpath d='M0 5h31M27 1l5 4-5 4' fill='none' stroke='black' stroke-width='1.4'/%3E%3C/svg%3E") center/contain no-repeat}
-.st{display:block;width:100%;height:100%;padding:7px 9px;border:1.5px solid var(--link);font-size:13.5px;font-weight:500;line-height:1.35}
-.st small{display:block;font-size:11px;font-weight:700;letter-spacing:.02em}
+.st{display:block;width:100%;height:100%;padding:9px 10px;border:1.5px solid var(--link);font-size:15px;font-weight:500;line-height:1.35}
+.st small{display:block;font-size:12px;font-weight:700;letter-spacing:.02em}
 .st.llm{background:var(--field);border-color:var(--field);color:var(--on-field)}
 .st.ppl{border-style:dashed;border-color:var(--muted);color:var(--muted)}
 .st.bad{border:3px solid var(--warn)}
+.hi{background:color-mix(in srgb,var(--field) 7%,var(--ground))}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;margin-top:14px}
+.big{border:2px solid var(--field);background:var(--ground);padding:22px 20px}
+.big .num{display:inline-grid;place-items:center;width:38px;height:38px;background:var(--field);color:var(--on-field);font-weight:800;font-size:20px;margin-bottom:10px}
+.big h3{margin:0 0 8px;font-size:22px;line-height:1.35}
+.big p{margin:0 0 16px;color:var(--muted);font-size:16px}
+.big .lane{margin:0}
 .row{margin:0 0 22px}
 .row h3{margin:0 0 8px;font-size:14px;color:var(--muted);display:flex;gap:10px;align-items:baseline}
 .row h3 b{color:var(--ink);font-size:16px}
@@ -64,7 +71,7 @@ footer{padding:28px 0 56px;color:var(--muted);font-size:14px;border-top:1px soli
   .lane li{flex-direction:column;align-items:stretch;flex:none}
   .lane li:not(:first-child)::before{width:10px;height:18px;margin:2px 0 2px 18px;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 34'%3E%3Cpath d='M5 0v31M1 27l4 5 4-5' fill='none' stroke='black' stroke-width='1.4'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 34'%3E%3Cpath d='M5 0v31M1 27l4 5 4-5' fill='none' stroke='black' stroke-width='1.4'/%3E%3C/svg%3E") center/contain no-repeat}
   .st{font-size:14.5px;padding:8px 12px}
-  .vs{grid-template-columns:1fr}
+  .vs,.two{grid-template-columns:1fr}
 }
 </style>
 </head>
@@ -75,6 +82,13 @@ footer{padding:28px 0 56px;color:var(--muted);font-size:14px;border-top:1px soli
 <p>LLM 역할만 스크립트로 대신하고, run.sh 루프와 verify 게이트는 실제 코드 그대로 돌린 기록입니다.</p>
 </div></header>
 <main>
+<section class="hi"><div class="wrap">
+<h2>Olympus의 강점 2가지</h2>
+<div class="two">
+<div class="big"><span class="num">1</span><h3>API 키 없이, 구독 플랜으로</h3><p>로컬에 로그인된 Claude Code를 헤드리스로 호출합니다. 토큰 한도에 걸리면 자동으로 기다렸다 이어갑니다.</p><ol class="lane"><li><span class="st ppl"><small>사람</small>내 PC<br>Claude Code 로그인</span></li><li><span class="st"><small>코드</small>claude -p<br>헤드리스 호출</span></li><li><span class="st llm"><small>LLM</small>구독 플랜<br>API 키 0</span></li></ol></div>
+<div class="big"><span class="num">2</span><h3>메일로 보고받고, 메일로 지시</h3><p>자리를 비워도 메일 답장 한 줄(y/n)로 승인합니다. 밖에서도 개발이 이어집니다.</p><ol class="lane"><li><span class="st"><small>코드</small>run.sh<br>승인 메일 발송</span></li><li><span class="st ppl"><small>사람</small>외부(폰)<br>답장 y/n</span></li><li><span class="st"><small>코드</small>IMAP 폴링<br>감지 → 재개</span></li></ol></div>
+</div>
+</div></section>
 <section><div class="wrap">
 <h2>파이프라인</h2>
 <p class="cap">합격은 LLM의 말이 아니라 실행되는 verify.sh가 정합니다. 사람 승인은 전체가 끝난 뒤 한 번입니다.</p>
