@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Olympus.app 아이콘 원본 — 밤하늘 위 황금 신전 (macOS 라운드 스퀘어) -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1e1b4b"/>
+      <stop offset="0.55" stop-color="#312e81"/>
+      <stop offset="1" stop-color="#6d28d9"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fde68a"/>
+      <stop offset="0.5" stop-color="#fbbf24"/>
+      <stop offset="1" stop-color="#d97706"/>
+    </linearGradient>
+    <linearGradient id="mountain" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4c1d95"/>
+      <stop offset="1" stop-color="#2e1065"/>
+    </linearGradient>
+    <clipPath id="squircle">
+      <rect x="100" y="100" width="824" height="824" rx="186"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#squircle)">
+    <!-- 하늘 -->
+    <rect x="100" y="100" width="824" height="824" fill="url(#sky)"/>
+    <!-- 별 -->
+    <circle cx="240" cy="240" r="7" fill="#ffffff" opacity="0.9"/>
+    <circle cx="330" cy="180" r="4" fill="#ffffff" opacity="0.6"/>
+    <circle cx="700" cy="210" r="5" fill="#ffffff" opacity="0.7"/>
+    <circle cx="790" cy="300" r="8" fill="#ffffff" opacity="0.9"/>
+    <circle cx="600" cy="160" r="3" fill="#ffffff" opacity="0.5"/>
+    <circle cx="180" cy="380" r="4" fill="#ffffff" opacity="0.5"/>
+    <circle cx="850" cy="430" r="4" fill="#ffffff" opacity="0.55"/>
+    <!-- 달 -->
+    <circle cx="760" cy="215" r="46" fill="#fef3c7" opacity="0.95"/>
+    <circle cx="742" cy="203" r="40" fill="url(#sky)" opacity="0.9"/>
+    <!-- 산(올림푸스) 실루엣 -->
+    <path d="M100 800 L300 520 L400 660 L520 470 L660 680 L780 560 L924 780 L924 924 L100 924 Z"
+          fill="url(#mountain)" opacity="0.85"/>
+    <!-- 신전 -->
+    <g>
+      <!-- 페디먼트(박공) -->
+      <path d="M512 268 L726 386 L298 386 Z" fill="url(#gold)"/>
+      <path d="M512 302 L678 386 L346 386 Z" fill="#92400e" opacity="0.55"/>
+      <!-- 아키트레이브 -->
+      <rect x="310" y="398" width="404" height="34" rx="8" fill="url(#gold)"/>
+      <!-- 기둥 4개 -->
+      <rect x="330" y="446" width="52" height="212" rx="10" fill="url(#gold)"/>
+      <rect x="434" y="446" width="52" height="212" rx="10" fill="url(#gold)"/>
+      <rect x="538" y="446" width="52" height="212" rx="10" fill="url(#gold)"/>
+      <rect x="642" y="446" width="52" height="212" rx="10" fill="url(#gold)"/>
+      <!-- 기단(3단) -->
+      <rect x="310" y="670" width="404" height="30" rx="8" fill="url(#gold)"/>
+      <rect x="284" y="702" width="456" height="30" rx="8" fill="url(#gold)"/>
+      <rect x="256" y="734" width="512" height="30" rx="8" fill="url(#gold)"/>
+    </g>
+  </g>
+</svg>

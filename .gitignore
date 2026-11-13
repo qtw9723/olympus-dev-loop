@@ -1,0 +1,12 @@
+# 런타임 상태 — 매 실행 reset.sh/run.sh가 생성
+state/
+# 사용자 기획서(프로젝트별) — 가이드만 추적
+spec/*
+!spec/_README.md
+# 로컬 전용
+.DS_Store
+.claude/
+.env.local
+__pycache__/
+*.pyc
+demo/recorded/

@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>올림푸스 큐</title>
+<style>
+  :root{
+    --bg:#0f1217; --panel:#171c24; --line:#2a3140; --fg:#dfe5ee; --dim:#8b95a7;
+    --blue:#4c8dff; --green:#3fb96a; --yellow:#d9a13b; --red:#e05d5d; --gray:#6b7583;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 -apple-system,"Apple SD Gothic Neo",sans-serif}
+  .wrap{max-width:860px;margin:0 auto;padding:24px 16px 60px}
+  h1{font-size:18px;margin:0;display:flex;align-items:center;gap:10px}
+  h1 .sub{color:var(--dim);font-size:12px;font-weight:400}
+  header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px}
+  .hstatus{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+  .usage{font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums;cursor:help}
+  .usage b{color:var(--yellow);font-weight:700}
+  .usage-link{font-size:12px;color:var(--dim);text-decoration:none;border:1px solid var(--dim);border-radius:6px;padding:2px 8px;margin-left:10px;white-space:nowrap}
+  .usage-link:hover{color:var(--yellow);border-color:var(--yellow)}
+  .worker{font-size:12px;color:var(--dim);display:flex;align-items:center;gap:8px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--gray)}
+  .dot.on{background:var(--green);box-shadow:0 0 6px var(--green)}
+  .dot.stale{background:var(--red);box-shadow:0 0 6px var(--red)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:14px}
+  form{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  select,button{background:#1f2632;color:var(--fg);border:1px solid var(--line);border-radius:7px;padding:6px 10px;font-size:13px;cursor:pointer}
+  select:focus,button:focus{outline:1px solid var(--blue)}
+  button:hover{border-color:var(--blue)}
+  button.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+  button.danger:hover{border-color:var(--red);color:var(--red)}
+  button:disabled{opacity:.4;cursor:default}
+  .item{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;background:var(--panel)}
+  .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .badge{font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;color:#fff}
+  .b-queued{background:#3a4356}.b-running{background:var(--blue)}.b-paused{background:var(--yellow);color:#222}
+  .b-done{background:var(--green)}.b-failed{background:var(--red)}.b-cancelled{background:#555}
+  .proj{font-weight:600;cursor:pointer}
+  .proj:hover{color:var(--blue)}
+  .meta{color:var(--dim);font-size:12px}
+  .spacer{flex:1}
+  .actions{display:flex;gap:6px;align-items:center}
+  .actions button{padding:3px 8px;font-size:12px}
+  .bar{height:5px;background:#242c3a;border-radius:3px;margin-top:8px;overflow:hidden}
+  .bar i{display:block;height:100%;background:var(--blue);transition:width .4s}
+  .task{color:var(--dim);font-size:12px;margin-top:4px}
+  .result{font-size:12px;margin-top:4px}
+  .result.green{color:var(--green)} .result.bad{color:var(--red)} .result.warn{color:var(--yellow)}
+  .detail{margin-top:10px;border-top:1px dashed var(--line);padding-top:8px;font-size:12px}
+  .detail pre{background:#0c0f13;border:1px solid var(--line);border-radius:7px;padding:8px;max-height:260px;overflow:auto;white-space:pre-wrap;word-break:break-all;color:#aeb8c9;margin:6px 0 0}
+  .empty{color:var(--dim);text-align:center;padding:30px 0}
+  .decision{border:1px solid var(--yellow);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:#1c1913}
+  .decision h2{font-size:14px;margin:0 0 6px;color:var(--yellow)}
+  .decision pre{background:#0c0f13;border:1px solid var(--line);border-radius:7px;padding:8px;max-height:200px;overflow:auto;white-space:pre-wrap;word-break:break-all;color:#e8dcc0;margin:0}
+  .decision textarea{width:100%;min-height:64px;background:#1f2632;color:var(--fg);border:1px solid var(--line);border-radius:7px;padding:8px;font:13px/1.5 -apple-system,"Apple SD Gothic Neo",sans-serif;resize:vertical;margin-top:8px}
+  .decision textarea:focus{outline:1px solid var(--yellow)}
+  .live{border-color:var(--blue)}
+  .live .head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .live .role{font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;background:var(--blue);color:#fff}
+  .live pre{background:#0c0f13;border:1px solid var(--line);border-radius:7px;padding:8px;max-height:240px;overflow:auto;white-space:pre-wrap;word-break:break-all;color:#aeb8c9;margin:8px 0 0;font-size:11px}
+  .openq summary{cursor:pointer;color:var(--dim);font-size:12px}
+  .openq pre{background:#0c0f13;border:1px solid var(--line);border-radius:7px;padding:8px;white-space:pre-wrap;word-break:break-all;color:#aeb8c9;margin:6px 0}
+  #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--red);color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;max-width:90%}
+  #toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>⚡ 올림푸스 큐 <span class="sub">state/queue.json</span></h1>
+    <div class="hstatus">
+      <div class="usage" id="usage" title="전 프로젝트 누적 토큰(state/*/usage.tsv). $ = API 종량제 단가 환산가치이며 실제 청구가 아닙니다(Pro/Max는 정액).">🎟 —</div>
+      <a class="usage-link" href="/usage" target="_blank" rel="noopener" title="프로젝트별·일자별 사용량 대시보드">📊 사용량 상세</a>
+      <div class="worker" id="worker"><span class="dot"></span>워커 없음</div>
+    </div>
+  </header>
+
+  <div id="decisions"></div>
+  <div id="live"></div>
+
+  <div class="panel">
+    <form id="addForm">
+      <select id="addProject"></select>
+      <select id="addMode">
+        <option value="auto">auto</option><option value="lite">lite</option><option value="full">full</option>
+      </select>
+      <button type="submit" class="primary">➕ 등록</button>
+      <span class="meta">배열 순서 = 우선순위 · 워커 실행은 터미널에서 <code>bash queue.sh work</code></span>
+    </form>
+  </div>
+
+  <div id="list"></div>
+</div>
+<div id="toast"></div>
+
+<script>
+'use strict';
+let snap = null;
+const openDetails = new Set();   // 상세가 열린 항목 id
+const detailCache = {};          // id → detail 응답
+
+function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function hum(n){ n = +n || 0; if(n>=1e9) return (n/1e9).toFixed(2)+'B'; if(n>=1e6) return (n/1e6).toFixed(1)+'M'; if(n>=1e3) return Math.round(n/1e3)+'k'; return String(n); }
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 4000);
+}
+async function api(path, body){
+  try{
+    const res = await fetch(path, body ? {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)} : undefined);
+    const data = await res.json();
+    if(!res.ok){ toast(data.error || res.status); return null; }
+    return data;
+  }catch(e){ toast('서버 연결 실패 — ui.sh가 떠 있나요?'); return null; }
+}
+async function act(path, body){ const r = await api(path, body); if(r) refresh(); }
+
+function renderUsage(u){
+  const el = document.getElementById('usage');
+  if(!el || !u) return;
+  const usd = u.cost >= 1000 ? '$' + Math.round(u.cost) : '$' + (u.cost || 0).toFixed(2);
+  el.innerHTML = `🎟 전체 <b>${hum(u.total)}</b> tok · ~${usd}`;
+}
+
+function workerHtml(w, stale){
+  if(!w) return '<span class="dot"></span>워커 없음 (idle)';
+  const cls = stale ? 'dot stale' : 'dot on';
+  const label = stale ? '스테일 — 차기 워커가 회수' : `실행 중 pid ${w.pid}`;
+  return `<span class="${cls}"></span>${label} · ${esc(w.current_id||'')} · hb ${esc((w.heartbeat_at||'').slice(11,19))}`;
+}
+
+function itemHtml(it, i, n){
+  const st = it.status;
+  const mode = it.mode + (it.mode_resolved ? '→' + it.mode_resolved : '');
+  const p = it.progress;
+  const pct = p && p.total ? Math.round(p.done / p.total * 100) : 0;
+  let actions = '';
+  if(st === 'queued') actions = `
+    <button onclick="move('${it.id}',-1)" ${i===0?'disabled':''}>↑</button>
+    <button onclick="move('${it.id}',1)" ${i===n-1?'disabled':''}>↓</button>
+    <select onchange="act('/api/mode',{id:'${it.id}',mode:this.value})">
+      ${['auto','lite','full'].map(m=>`<option ${m===it.mode?'selected':''}>${m}</option>`).join('')}
+    </select>
+    <button class="danger" onclick="act('/api/remove',{id:'${it.id}'})">삭제</button>`;
+  else if(st === 'running') actions = it.request
+    ? `<span class="meta">⏳ ${it.request} 요청됨 — 역할 턴 사이에 반영</span>`
+    : `<button onclick="act('/api/request',{id:'${it.id}',action:'pause'})">⏸ 일시정지</button>
+       <button class="danger" onclick="act('/api/request',{id:'${it.id}',action:'cancel'})">⏹ 취소</button>`;
+  else if(st === 'paused') actions = `
+    <button onclick="act('/api/resume',{id:'${it.id}'})">▶ 재개</button>
+    <button class="danger" onclick="act('/api/remove',{id:'${it.id}'})">삭제</button>`;
+  else actions = `<button class="danger" onclick="act('/api/remove',{id:'${it.id}'})">삭제</button>`;
+
+  const resCls = it.result === 'green' ? 'green' : (it.result||'').startsWith('blocked') ? 'warn' : 'bad';
+  return `<div class="item">
+    <div class="row">
+      <span class="badge b-${esc(st)}">${esc(st)}</span>
+      <span class="proj" onclick="toggleDetail('${it.id}','${esc(it.project)}')">${esc(it.project)}</span>
+      <span class="meta">${esc(mode)}</span>
+      ${it.paused_reason ? `<span class="meta">(${esc(it.paused_reason)})</span>` : ''}
+      <span class="spacer"></span>
+      <div class="actions">${actions}</div>
+    </div>
+    ${p && p.total ? `<div class="bar"><i style="width:${pct}%"></i></div>
+      <div class="task">${p.done}/${p.total}${p.current_task ? ' · ' + esc(p.current_task) : ''}</div>` : ''}
+    ${it.result ? `<div class="result ${resCls}">${esc(it.result)}</div>` : ''}
+    ${openDetails.has(it.id) ? detailHtml(it.id) : ''}
+  </div>`;
+}
+
+function detailHtml(id){
+  const d = detailCache[id];
+  if(!d) return '<div class="detail">불러오는 중…</div>';
+  return `<div class="detail">
+    <b>handoff</b><pre>${esc(d.handoff ? JSON.stringify(d.handoff, null, 1) : '없음')}</pre>
+    ${d.log_tail ? `<b>${esc(d.log_name)}</b> (마지막 50줄)<pre>${esc(d.log_tail)}</pre>` : '<span class="meta">실행 로그 없음</span>'}
+  </div>`;
+}
+
+async function toggleDetail(id, project){
+  if(openDetails.has(id)){ openDetails.delete(id); render(); return; }
+  openDetails.add(id); render();
+  const d = await api('/api/detail?project=' + encodeURIComponent(project));
+  if(d){ detailCache[id] = d; render(); }
+}
+
+function move(id, dir){
+  const order = snap.items.map(x => x.id);
+  const i = order.indexOf(id), j = i + dir;
+  if(i < 0 || j < 0 || j >= order.length) return;
+  [order[i], order[j]] = [order[j], order[i]];
+  act('/api/reorder', {order});
+}
+
+function render(){
+  if(!snap) return;
+  document.getElementById('worker').innerHTML = workerHtml(snap.worker, snap.stale);
+  const list = document.getElementById('list');
+  list.innerHTML = snap.items.length
+    ? snap.items.map((it, i) => itemHtml(it, i, snap.items.length)).join('')
+    : '<div class="empty">큐가 비어 있습니다 — 위에서 프로젝트를 등록하세요</div>';
+  const sel = document.getElementById('addProject');
+  const queued = new Set(snap.items.filter(x => ['queued','running','paused'].includes(x.status)).map(x => x.project));
+  const cur = sel.value;
+  sel.innerHTML = snap.projects.map(pj =>
+    `<option value="${esc(pj)}">${esc(pj)}${queued.has(pj) ? ' (큐에 있음)' : ''}</option>`).join('');
+  if([...sel.options].some(o => o.value === cur)) sel.value = cur;
+}
+
+let decs = null;
+function decisionsHtml(){
+  const cards = decs.blockers.map(b => `<div class="decision">
+    <h2>🙋 결정 대기 — ${esc(b.project)}</h2>
+    <pre>${esc(b.question || '(questions.md 없음 — 상세의 실행 로그를 확인하세요)')}</pre>
+    <textarea id="ans-${esc(b.id)}" placeholder="답을 적고 [답변하고 재개] — 기획자가 반영해 이어갑니다"></textarea>
+    <div class="row" style="margin-top:8px">
+      <span class="meta">state/${esc(b.project)}/human-answers.md에 기록 후 자동 재개</span>
+      <span class="spacer"></span>
+      <button class="primary" onclick="sendAnswer('${esc(b.id)}')">답변하고 재개</button>
+    </div>
+  </div>`).join('');
+  const oq = decs.open_questions.length ? `<details class="panel openq">
+    <summary>🧭 열린 질문(가정으로 진행 중 — 참고) ${decs.open_questions.length}건</summary>
+    ${decs.open_questions.map(o => `<div><b>${esc(o.project)}</b><pre>${esc(o.content)}</pre></div>`).join('')}
+  </details>` : '';
+  return cards + oq;
+}
+function renderDecisions(){
+  const el = document.getElementById('decisions');
+  const key = JSON.stringify(decs);
+  if(el.dataset.key === key) return;                // 변화 없으면 재렌더 안 함(입력 보존)
+  if(el.contains(document.activeElement)) return;   // 답변 입력 중엔 덮어쓰지 않음
+  el.dataset.key = key;
+  el.innerHTML = decisionsHtml();
+}
+async function sendAnswer(id){
+  const ta = document.getElementById('ans-' + id);
+  if(!ta.value.trim()) return toast('답변이 비어 있습니다');
+  act('/api/answer', {id, answer: ta.value});
+}
+
+function renderLive(d, it){
+  const el = document.getElementById('live');
+  if(!d || !it){ el.innerHTML = ''; el.dataset.key = ''; return; }
+  const h = d.handoff || {};
+  const key = JSON.stringify([it.id, h.turn, h.round, h.status, h.task, h.note]);
+  if(el.dataset.key !== key){   // 헤더가 바뀔 때만 재구성(로그 pre는 유지해 스크롤 보존)
+    el.dataset.key = key;
+    el.innerHTML = `<div class="panel live">
+      <div class="head">🔨 <b>실행 중 세션</b> — <span class="proj" onclick="toggleDetail('${esc(it.id)}','${esc(it.project)}')">${esc(it.project)}</span>
+        <span class="role">${esc(h.turn || '?')}</span>
+        <span class="meta">round ${h.round ?? '?'}/${h.max_rounds ?? '?'} · ${esc(h.status || '')}</span>
+        ${h.task ? `<span class="meta">· ${esc(h.task)}</span>` : ''}
+      </div>
+      ${h.note ? `<div class="meta" style="margin-top:4px">${esc(h.note)}</div>` : ''}
+      <pre id="livelog"></pre>
+    </div>`;
+  }
+  const pre = document.getElementById('livelog');
+  if(pre){
+    const next = d.log_tail || '(아직 로그 없음)';
+    if(pre.textContent !== next){
+      const pinned = pre.scrollHeight - pre.scrollTop - pre.clientHeight < 40;
+      pre.textContent = next;
+      if(pinned) pre.scrollTop = pre.scrollHeight;   // 아래에 붙어 있을 때만 따라 내려감
+    }
+  }
+}
+
+async function refresh(){
+  const [d, dc, u] = await Promise.all([api('/api/queue'), api('/api/decisions'), api('/api/usage')]);
+  if(d){ snap = d; render(); }
+  if(dc){ decs = dc; renderDecisions(); }
+  if(u){ renderUsage(u); }
+  const run = snap ? snap.items.find(x => x.status === 'running') : null;
+  if(run){
+    const dd = await api('/api/detail?project=' + encodeURIComponent(run.project));
+    renderLive(dd, run);
+  } else {
+    renderLive(null, null);
+  }
+}
+
+document.getElementById('addForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const project = document.getElementById('addProject').value;
+  if(!project) return toast('spec/ 아래에 프로젝트 기획서 폴더가 없습니다');
+  act('/api/add', {project, mode: document.getElementById('addMode').value});
+});
+
+refresh();
+setInterval(refresh, 2000);
+</script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Olympus.app — 원클릭 트리거: 터미널을 열어 start.command(UI+브라우저+큐 감시)를 실행한다.
+# .app이 저장소 루트에 있으면 그 저장소를, 밖으로 복사됐으면 기본 경로를 쓴다.
+SELF_ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
+if [ -f "$SELF_ROOT/start.command" ]; then ROOT="$SELF_ROOT"; else ROOT="$HOME/projects/olympus"; fi
+exec open -b com.apple.Terminal "$ROOT/start.command"

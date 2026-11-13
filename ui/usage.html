@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>올림푸스 · 토큰 사용량</title>
+<style>
+:root{--bg:#0f1417;--panel:#161c21;--line:#242c33;--tx:#c9d1d6;--mut:#8a969e;--acc:#e8a13a;--accd:#7a5a24}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,sans-serif;line-height:1.5}
+.wrap{max-width:1000px;margin:0 auto;padding:44px 22px 64px}
+.eyebrow{font:600 11px/1 ui-monospace,Menlo,monospace;letter-spacing:.18em;color:var(--acc);text-transform:uppercase}
+h1{font-size:30px;font-weight:700;letter-spacing:-.02em;margin:12px 0 4px}
+h2{font-size:15px;font-weight:700;margin:34px 2px 12px;color:#eef2f4}
+.sub{color:var(--mut);font:500 13px/1.4 ui-monospace,Menlo,monospace}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:28px 0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+.card .k{color:var(--mut);font:600 11px/1 ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase}
+.card .v{margin-top:8px;font:700 24px/1 ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;color:#eef2f4}
+.card .v.acc{color:var(--acc)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{text-align:right;padding:11px 14px;font:500 13px/1.3 ui-monospace,Menlo,monospace;white-space:nowrap}
+th{color:var(--mut);font-size:10px;letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--line);font-weight:600}
+td:first-child,th:first-child{text-align:left}
+tbody tr{border-bottom:1px solid var(--line)}tbody tr:last-child{border-bottom:0}
+.proj{color:#eef2f4;font-weight:600}
+.bar{position:relative;height:5px;background:#1e262c;border-radius:3px;margin-top:6px;overflow:hidden}
+.bar span{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,var(--accd),var(--acc));border-radius:3px}
+.cost{color:var(--acc);font-weight:700}.mut{color:var(--mut)}
+.matrix td.cell{color:#eef2f4}
+.note{margin:22px 2px 0;color:var(--mut);font-size:12.5px;line-height:1.6;border-left:2px solid var(--accd);padding-left:12px}
+footer{margin-top:14px;color:#5f6a71;font:500 12px/1.5 ui-monospace,monospace}
+.empty{padding:48px 22px;text-align:center;color:var(--mut)}
+a{color:var(--acc)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">올림푸스 · 토큰 사용량</div>
+  <h1>프로젝트별 · 일자별 소비</h1>
+  <div class="sub" id="sub">불러오는 중…</div>
+  <div id="body"></div>
+  <p class="note"><strong style="color:var(--tx)">$ 는 실제 청구가 아닙니다.</strong> 종량제 API 단가로 환산한 상대 소비량입니다(Pro/Max는 정액). 캐시읽기 0.1×·캐시쓰기 1.25× 근사. 소스: <code>state/&lt;project&gt;/usage.tsv</code> — 큐 헤더 총계와 동일.</p>
+  <footer>새로고침하면 최신 집계로 갱신됩니다.</footer>
+</div>
+<script>
+function hum(n){ if(n>=1e9)return (n/1e9).toFixed(2)+'B'; if(n>=1e6)return (n/1e6).toFixed(1)+'M'; if(n>=1e3)return Math.round(n/1e3)+'k'; return String(n); }
+function usd(c){ c=c||0; return c>=1000 ? '$'+Math.round(c) : '$'+c.toFixed(2); }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+
+function render(u){
+  const sub=document.getElementById('sub'), body=document.getElementById('body');
+  if(!u || !u.projects || u.projects.length===0){
+    sub.textContent='';
+    body.innerHTML='<div class="panel"><div class="empty">아직 기록이 없습니다. 파이프라인이 실행되면 <code>state/*/usage.tsv</code>에 쌓입니다.</div></div>';
+    return;
+  }
+  const t=u.total;
+  const firstDay=u.days[0].day, lastDay=u.days[u.days.length-1].day;
+  sub.textContent=`${firstDay} ~ ${lastDay} · 프로젝트 ${u.projects.length}`;
+
+  let h='';
+  // 요약 카드
+  h+='<div class="stats">';
+  h+=`<div class="card"><div class="k">총 토큰</div><div class="v acc">${hum(t.total)}</div></div>`;
+  h+=`<div class="card"><div class="k">환산가치</div><div class="v">${usd(t.cost)}</div></div>`;
+  h+=`<div class="card"><div class="k">프로젝트</div><div class="v">${u.projects.length}</div></div>`;
+  h+=`<div class="card"><div class="k">총 호출</div><div class="v">${hum(t.calls)}</div></div>`;
+  h+='</div>';
+
+  // 프로젝트별
+  const pmax=Math.max.apply(null,u.projects.map(p=>p.cost).concat([0]));
+  h+='<h2>프로젝트별</h2><div class="panel scroll"><table><thead><tr><th>프로젝트</th><th>총 토큰</th><th>환산$</th><th>호출</th><th>기간</th></tr></thead><tbody>';
+  u.projects.forEach(p=>{
+    const w=pmax>0?Math.round(p.cost/pmax*100):0;
+    h+=`<tr><td><div class="proj">${esc(p.name)}</div><div class="bar"><span style="width:${w}%"></span></div></td>`;
+    h+=`<td class="mut">${hum(p.total)}</td><td class="cost">${usd(p.cost)}</td><td class="mut">${hum(p.calls)}</td><td class="mut">${p.first}~${p.last}</td></tr>`;
+  });
+  h+='</tbody></table></div>';
+
+  // 일자별
+  const dmax=Math.max.apply(null,u.days.map(d=>d.cost).concat([0]));
+  h+='<h2>일자별</h2><div class="panel scroll"><table><thead><tr><th>일자</th><th>총 토큰</th><th>환산$</th><th>호출</th></tr></thead><tbody>';
+  u.days.forEach(d=>{
+    const w=dmax>0?Math.round(d.cost/dmax*100):0;
+    h+=`<tr><td><div class="proj">${d.day}</div><div class="bar"><span style="width:${w}%"></span></div></td>`;
+    h+=`<td class="mut">${hum(d.total)}</td><td class="cost">${usd(d.cost)}</td><td class="mut">${hum(d.calls)}</td></tr>`;
+  });
+  h+='</tbody></table></div>';
+
+  // 프로젝트 × 일자 매트릭스 (셀=토큰, 색농도, 우측 합계)
+  const days=u.days.map(d=>d.day);
+  let cmax=0;
+  Object.keys(u.cells).forEach(k=>{ if(u.cells[k].total>cmax)cmax=u.cells[k].total; });
+  h+='<h2>프로젝트 × 일자</h2><div class="panel scroll matrix"><table><thead><tr><th>프로젝트</th>';
+  days.forEach(d=>{ h+=`<th>${d.slice(5)}</th>`; });
+  h+='<th>합계</th></tr></thead><tbody>';
+  u.projects.forEach(p=>{
+    h+=`<tr><td><div class="proj">${esc(p.name)}</div></td>`;
+    days.forEach(d=>{
+      const cell=u.cells[p.name+'|'+d];
+      if(cell){
+        const a=cmax>0?(0.12+0.78*cell.total/cmax):0;
+        h+=`<td class="cell" style="background:rgba(232,161,58,${a.toFixed(3)})" title="${p.name} · ${d}\n${hum(cell.total)} tok · ${usd(cell.cost)}">${hum(cell.total)}</td>`;
+      } else {
+        h+='<td class="mut">·</td>';
+      }
+    });
+    h+=`<td class="cost">${hum(p.total)}</td></tr>`;
+  });
+  // 하단 합계 행
+  h+='<tr><td class="mut">합계</td>';
+  u.days.forEach(d=>{ h+=`<td class="mut">${hum(d.total)}</td>`; });
+  h+=`<td class="cost">${hum(t.total)}</td></tr>`;
+  h+='</tbody></table></div>';
+
+  body.innerHTML=h;
+}
+
+(async function(){
+  try{
+    const res=await fetch('/api/usage/breakdown');
+    if(!res.ok) throw new Error(res.status);
+    render(await res.json());
+  }catch(e){
+    document.getElementById('sub').textContent='';
+    document.getElementById('body').innerHTML='<div class="panel"><div class="empty">서버 연결 실패 — <code>ui.sh</code>가 떠 있나요?</div></div>';
+  }
+})();
+</script>
+</body>
+</html>

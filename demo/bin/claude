@@ -1,0 +1,122 @@
+#!/usr/bin/env bash
+# 데모용 가짜 claude — 정해진 스크립트대로만 응답한다(실제 LLM 호출 없음).
+# run.sh의 실제 루프·게이트·핸드오프 로직은 그대로 실행되고, 역할 세션의 "행동"만 이 스크립트가 대신한다.
+set -u
+prompt=""
+while [ $# -gt 0 ]; do case "$1" in -p) prompt="$2"; shift 2;; *) shift;; esac; done
+[ "$prompt" = "ok" ] && { echo ok; exit 0; }
+
+STATE="$(printf '%s\n' "$prompt" | sed -n 's/^- 파이프라인 상태 디렉토리: //p' | head -1)"
+HEAD1="$(printf '%s\n' "$prompt" | head -1)"
+H="$STATE/handoff.json"
+say() { printf '[scripted claude] %s\n' "$*"; }
+set_handoff() {  # turn status [round]
+  local r; r="$(jq -r '.round // 0' "$H" 2>/dev/null || echo 0)"
+  [ -n "${3:-}" ] && r="$3"
+  jq -n --arg t "$1" --arg s "$2" --argjson r "$r" '{turn:$t,status:$s,round:$r,max_rounds:6}' > "$H"
+}
+count() { local f="$STATE/.demo_$1"; local n=0; [ -f "$f" ] && n="$(cat "$f")"; n=$((n+1)); echo "$n" > "$f"; echo "$n"; }
+
+case "$HEAD1" in
+*메티스*)
+  mode="$(printf '%s\n' "$prompt" | sed -n 's/^## 이번 호출 모드: //p' | head -1)"
+  case "$mode" in
+  M0)
+    if [ "$(wc -l < "$STATE/requirements.md" 2>/dev/null || echo 0)" -gt 1 ]; then
+      say "M0(재시작): requirements.md가 이미 있다 — 재분석 없이 상태만 점검하고 루프를 재개시킨다."
+      exit 0
+    fi
+    cat > "$STATE/requirements.md" <<'R'
+# 요구사항 분석서
+- 목표: 문자열을 URL용 슬러그로 바꾸는 `slugify(text)` 한 개.
+- 범위: slug.py, test_slug.py. 외부 의존성 없음.
+- 가정: 한글 등 비ASCII 문자는 구분자로 취급한다.
+R
+    cat > "$STATE/backlog.md" <<'B'
+# 백로그
+## todo
+## doing
+### slugify 함수
+## done
+B
+    printf '## slugify 함수\n수용 기준: 소문자화, 구분자 묶음은 하이픈 하나, 앞뒤 하이픈 제거, 빈 입력은 빈 문자열, 단위 테스트 포함.\n' > "$STATE/task.md"
+    set_handoff builder ready 0
+    say "요구사항 분석 → 작업 1개로 분해(slugify 함수), task.md에 복사."
+    ;;
+  M1) say "질문 없음."; ;;
+  M2)
+    printf '# 백로그\n## todo\n## doing\n## done\n### slugify 함수\n' > "$STATE/backlog.md"
+    printf -- '- [scripted] findings 없음. 남은 작업 없음.\n' >> "$STATE/decisions.md"
+    set_handoff metis all_done
+    say "남은 작업 없음 → all_done."
+    ;;
+  esac
+  ;;
+*헤파이스토스*)
+  n="$(count builder)"
+  if [ "$n" = "1" ]; then
+    cat > slug.py <<'P'
+import re
+
+def slugify(text):
+    return re.sub(r"[^a-z0-9]", "-", text.lower())
+P
+    cat > test_slug.py <<'P'
+import unittest
+from slug import slugify
+
+class TestSlugify(unittest.TestCase):
+    def test_collapse(self):
+        self.assertEqual(slugify("Hello,   World!"), "hello-world")
+    def test_trim(self):
+        self.assertEqual(slugify("--Hi--"), "hi")
+    def test_empty(self):
+        self.assertEqual(slugify("!!!"), "")
+
+if __name__ == "__main__":
+    unittest.main()
+P
+    # 의도적 시나리오: 테스트가 실패하자 "통과 강제"로 심판 파일을 고친다(역할 규칙 위반)
+    sed -i.bak 's/^python3 -m unittest.*/& || true/' verify.sh && rm -f verify.sh.bak
+    printf -- '- [builder] 구현 완료. 테스트가 막혀 verify.sh에 || true 추가.\n' >> "$STATE/progress.md"
+    set_handoff critic reviewing 1
+    say "slug.py/test_slug.py 작성. (시나리오: 실패하는 테스트를 verify.sh 수정으로 가림)"
+  else
+    cat > slug.py <<'P'
+import re
+
+def slugify(text):
+    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+P
+    printf -- '- [builder] critic-feedback 반영: 구분자 묶음 처리와 앞뒤 하이픈 제거로 구현 수정. verify.sh는 건드리지 않음.\n' >> "$STATE/progress.md"
+    set_handoff critic reviewing 2
+    say "slug.py 수정(심판 파일 변경 없음)."
+  fi
+  ;;
+*모모스*)
+  changed="$(git status --porcelain | awk '{print $2}')"
+  if printf '%s\n' "$changed" | grep -qx 'verify.sh'; then
+    {
+      echo "⚠️심판변경: Builder 변경분에 심판 파일 verify.sh가 포함됐다."
+      echo
+      echo "증거(git diff -- verify.sh):"
+      git --no-pager diff -- verify.sh | sed 's/^/    /'
+      echo
+      echo "검사가 약화됐다: 테스트 실패(exit≠0)가 || true로 가려져 verify가 통과로 보인다."
+      echo "이 green은 신뢰할 수 없다. 사람 판단이 필요하다(verify.sh 원복 후 구현 수정)."
+    } > "$STATE/critic-feedback.md"
+    set_handoff human reviewing
+    say "심판 파일 변경 감지 → turn=human 에스컬레이션."
+  elif grep -q '^VERIFY_EXIT=0' "$STATE/verify.txt" 2>/dev/null; then
+    printf '결함 없음. verify.txt: VERIFY_EXIT=0, diff에 심판 파일 없음.\n' > "$STATE/critic-feedback.md"
+    printf -- '- [critic] 검사완료: AC 1~4, 심판 무결성\n' >> "$STATE/progress.md"
+    set_handoff metis green
+    say "green 판정."
+  else
+    printf 'verify 실패. 수용 기준 미충족 — verify.txt 참고.\n' > "$STATE/critic-feedback.md"
+    set_handoff builder reviewing
+    say "반려."
+  fi
+  ;;
+esac
+exit 0
